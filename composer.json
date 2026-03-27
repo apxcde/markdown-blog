@@ -1,0 +1,51 @@
+{
+    "name": "xsavo/markdown-blog",
+    "description": "Markdown-powered blog package for Laravel apps",
+    "type": "library",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.3",
+        "laravel/framework": "^12.11",
+        "spatie/laravel-package-tools": "^1.92"
+    },
+    "require-dev": {
+        "pestphp/pest": "^4.2",
+        "pestphp/pest-plugin-arch": "^4.0",
+        "orchestra/testbench": "^10.8"
+    },
+    "autoload": {
+        "psr-4": {
+            "xsavo\\MarkdownBlog\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "xsavo\\MarkdownBlog\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "xsavo\\MarkdownBlog\\MarkdownBlogServiceProvider"
+            ],
+            "aliases": {
+                "MarkdownBlog": "xsavo\\MarkdownBlog\\Facades\\MarkdownBlog"
+            }
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true,
+            "php-http/discovery": true
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "scripts": {
+        "test": "vendor/bin/pest",
+        "test-coverage": "vendor/bin/pest --coverage"
+    }
+}
