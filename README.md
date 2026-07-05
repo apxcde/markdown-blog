@@ -1,81 +1,47 @@
-# xsavo Markdown Blog
+# xsavo/markdown-blog
 
-`xsavo/markdown-blog` extracts the markdown article-loading logic currently used in `internal/apexcode` into a reusable Turbine platform package.
+`xsavo/markdown-blog` is a Laravel package for loading markdown-based blog articles from your application files.
 
-It currently provides:
+It provides:
 
-- discovery of markdown articles from a configured directory
-- simple frontmatter parsing for `title`, `description`, `author`, `date`, and `slug`
-- normalized article payloads with computed excerpts and formatted dates
-- slug-based article lookup through a repository or facade-backed service
+- discovery of article files from a configured directory
+- frontmatter parsing for common article metadata
+- normalized article payloads
+- generated excerpts from markdown content
+- date formatting for display
+- slug-based article lookup
 
-## Current Status
+## Requirements
 
-This package currently covers the content layer only.
-
-What exists today:
-
-- `xsavo\MarkdownBlog\ArticleRepository` loads `page.md` files from the configured articles path
-- `xsavo\MarkdownBlog\MarkdownBlog` exposes `all()` and `findBySlug()` for application use
-- package tests cover article discovery, fallback metadata, and slug lookup
-
-What does not exist yet:
-
-- routes
-- controllers
-- Livewire components
-- Blade blog index/detail views
-
-Those remain host-application responsibilities until the platform blog UI contract is defined.
+- PHP 8.3+
+- Laravel 13+
 
 ## Installation
 
-From a product or internal app directory, add the local path repository and require the package:
+Require the package with Composer:
+
+```bash
+composer require xsavo/markdown-blog
+```
+
+If you are using this package from the Turbine monorepo via a local path repository:
 
 ```bash
 composer config repositories.markdown-blog path ../../platform/markdown-blog
 composer require xsavo/markdown-blog:*@dev
 ```
 
-The service provider `xsavo\MarkdownBlog\MarkdownBlogServiceProvider` is auto-registered through Laravel package discovery.
-
-## Usage
-
-Resolve the repository directly:
-
-```php
-use xsavo\MarkdownBlog\ArticleRepository;
-
-$articles = app(ArticleRepository::class)->all();
-$article = app(ArticleRepository::class)->findBySlug('infinite-scroll-with-laravel-and-livewire');
-```
-
-Or use the package service:
-
-```php
-use xsavo\MarkdownBlog\MarkdownBlog;
-
-$articles = app(MarkdownBlog::class)->all();
-$article = app(MarkdownBlog::class)->findBySlug('infinite-scroll-with-laravel-and-livewire');
-```
-
-Each article is returned as an array with this shape:
-
-```php
-[
-    'slug' => 'infinite-scroll-with-laravel-and-livewire',
-    'title' => 'Infinite Scroll with Laravel and Livewire',
-    'description' => 'Infinite scrolling is a popular feature...',
-    'author' => 'Rick Mwamodo',
-    'date' => '2024-01-17',
-    'formatted_date' => 'Jan 17, 2024',
-    'content' => '# Markdown body...',
-]
-```
+The package service provider is auto-registered through Laravel package discovery.
 
 ## Configuration
 
-The package ships with `config/markdown-blog.php`:
+Publish the config file if you want to customize the article location or formatting:
+
+```bash
+php artisan vendor:publish --tag=markdown-blog-config
+```
+
+Default configuration:
 
 ```php
 return [
@@ -85,6 +51,101 @@ return [
     'date_format' => 'M j, Y',
 ];
 ```
+
+## Article structure
+
+By default, the package looks for files named `page.md` inside the configured articles directory.
+
+Example:
+
+```text
+resources/
+└── markdown/
+    └── articles/
+        ├── first-post/
+        │   └── page.md
+        └── another-post/
+            └── page.md
+```
+
+Example article:
+
+```md
+---
+title: Infinite Scroll with Laravel and Livewire
+description: Infinite scrolling is a popular feature for content-heavy pages.
+author: Rick Mwamodo
+date: 2024-01-17
+slug: infinite-scroll-with-laravel-and-livewire
+---
+
+# Infinite Scroll with Laravel and Livewire
+
+Article body goes here.
+```
+
+Supported frontmatter fields:
+
+- `title`
+- `description`
+- `author`
+- `date`
+- `slug`
+
+If some fields are omitted, the package falls back to sensible defaults where possible.
+
+## Usage
+
+### Resolve the repository
+
+```php
+use xsavo\MarkdownBlog\ArticleRepository;
+
+$repository = app(ArticleRepository::class);
+
+$articles = $repository->all();
+$article = $repository->findBySlug('infinite-scroll-with-laravel-and-livewire');
+```
+
+### Resolve the package service
+
+```php
+use xsavo\MarkdownBlog\MarkdownBlog;
+
+$blog = app(MarkdownBlog::class);
+
+$articles = $blog->all();
+$article = $blog->findBySlug('infinite-scroll-with-laravel-and-livewire');
+```
+
+### Use the facade
+
+```php
+use xsavo\MarkdownBlog\Facades\MarkdownBlog;
+
+$articles = MarkdownBlog::all();
+$article = MarkdownBlog::findBySlug('infinite-scroll-with-laravel-and-livewire');
+```
+
+## Returned article shape
+
+Each article is returned as an array like:
+
+```php
+[
+    'slug' => 'infinite-scroll-with-laravel-and-livewire',
+    'title' => 'Infinite Scroll with Laravel and Livewire',
+    'description' => 'Infinite scrolling is a popular feature for content-heavy pages.',
+    'author' => 'Rick Mwamodo',
+    'date' => '2024-01-17',
+    'formatted_date' => 'Jan 17, 2024',
+    'content' => '# Infinite Scroll with Laravel and Livewire...',
+]
+```
+
+## Notes
+
+This package handles article loading and normalization only. Rendering routes, controllers, Livewire components, and views remain the responsibility of the host application.
 
 ## Testing
 
