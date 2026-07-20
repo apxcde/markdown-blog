@@ -24,13 +24,6 @@ Require the package with Composer:
 composer require xsavo/markdown-blog
 ```
 
-If you are using this package from the Turbine monorepo via a local path repository:
-
-```bash
-composer config repositories.markdown-blog path ../../platform/markdown-blog
-composer require xsavo/markdown-blog:*@dev
-```
-
 The package service provider is auto-registered through Laravel package discovery.
 
 ## Configuration
@@ -152,3 +145,7 @@ This package handles article loading and normalization only. Rendering routes, c
 ```bash
 composer test
 ```
+
+## License
+
+The MIT License (MIT). See [LICENSE.md](LICENSE.md) for details.
