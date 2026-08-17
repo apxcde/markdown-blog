@@ -15,21 +15,21 @@
     },
     "autoload": {
         "psr-4": {
-            "xsavo\\MarkdownBlog\\": "src/"
+            "apxcde\\MarkdownBlog\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "xsavo\\MarkdownBlog\\Tests\\": "tests/"
+            "apxcde\\MarkdownBlog\\Tests\\": "tests/"
         }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "xsavo\\MarkdownBlog\\MarkdownBlogServiceProvider"
+                "apxcde\\MarkdownBlog\\MarkdownBlogServiceProvider"
             ],
             "aliases": {
-                "MarkdownBlog": "xsavo\\MarkdownBlog\\Facades\\MarkdownBlog"
+                "MarkdownBlog": "apxcde\\MarkdownBlog\\Facades\\MarkdownBlog"
             }
         }
     },

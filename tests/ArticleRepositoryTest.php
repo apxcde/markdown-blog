@@ -1,7 +1,7 @@
 <?php
 
-use xsavo\MarkdownBlog\ArticleRepository;
-use xsavo\MarkdownBlog\MarkdownBlog;
+use apxcde\MarkdownBlog\ArticleRepository;
+use apxcde\MarkdownBlog\MarkdownBlog;
 
 beforeEach(function () {
     config()->set('markdown-blog.articles_path', __DIR__.'/Fixtures/articles');

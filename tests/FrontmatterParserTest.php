@@ -1,6 +1,6 @@
 <?php
 
-use xsavo\MarkdownBlog\Support\FrontmatterParser;
+use apxcde\MarkdownBlog\Support\FrontmatterParser;
 
 it('parses frontmatter from utf8 bom-prefixed markdown', function () {
     $raw = "\xEF\xBB\xBF---\n"

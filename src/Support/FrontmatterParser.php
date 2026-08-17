@@ -1,6 +1,6 @@
 <?php
 
-namespace xsavo\MarkdownBlog\Support;
+namespace apxcde\MarkdownBlog\Support;
 
 /**
  * Minimal frontmatter parser supporting a small, deliberate subset of YAML.

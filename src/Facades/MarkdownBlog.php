@@ -1,20 +1,20 @@
 <?php
 
-namespace xsavo\MarkdownBlog\Facades;
+namespace apxcde\MarkdownBlog\Facades;
 
 use Illuminate\Support\Facades\Facade;
 
 /**
- * @see \xsavo\MarkdownBlog\MarkdownBlog
+ * @see \apxcde\MarkdownBlog\MarkdownBlog
  *
  * @method static \Illuminate\Support\Collection all()
  * @method static array|null findBySlug(string $slug)
- * @method static \xsavo\MarkdownBlog\ArticleRepository repository()
+ * @method static \apxcde\MarkdownBlog\ArticleRepository repository()
  */
 class MarkdownBlog extends Facade
 {
     protected static function getFacadeAccessor(): string
     {
-        return \xsavo\MarkdownBlog\MarkdownBlog::class;
+        return \apxcde\MarkdownBlog\MarkdownBlog::class;
     }
 }

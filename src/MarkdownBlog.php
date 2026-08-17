@@ -1,6 +1,6 @@
 <?php
 
-namespace xsavo\MarkdownBlog;
+namespace apxcde\MarkdownBlog;
 
 use Illuminate\Support\Collection;
 
