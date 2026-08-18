@@ -1,15 +1,22 @@
-# xsavo/markdown-blog
+# apxcde/markdown-blog
 
-`xsavo/markdown-blog` is a Laravel package for loading markdown-based blog articles from your application files.
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/apxcde/markdown-blog.svg)](https://packagist.org/packages/apxcde/markdown-blog)
+[![Tests](https://github.com/apxcde/markdown-blog/actions/workflows/tests.yml/badge.svg)](https://github.com/apxcde/markdown-blog/actions/workflows/tests.yml)
+[![License](https://img.shields.io/packagist/l/apxcde/markdown-blog.svg)](LICENSE.md)
 
-It provides:
+A Laravel package that turns a directory of markdown files into blog articles.
 
-- discovery of article files from a configured directory
+It gives you:
+
+- recursive discovery of article files under a configured directory
 - frontmatter parsing for common article metadata
-- normalized article payloads
-- generated excerpts from markdown content
-- date formatting for display
-- slug-based article lookup
+- normalized article payloads as plain arrays
+- a generated excerpt when an article declares no description
+- display-ready date formatting
+- slug-based article lookup, newest first
+
+It deliberately stops there: routes, controllers, Livewire components, and views
+stay in your application.
 
 ## Requirements
 
@@ -18,32 +25,23 @@ It provides:
 
 ## Installation
 
-Require the package with Composer:
-
 ```bash
-composer require xsavo/markdown-blog
+composer require apxcde/markdown-blog
 ```
 
-If you are using this package from the Turbine monorepo via a local path repository:
-
-```bash
-composer config repositories.markdown-blog path ../../platform/markdown-blog
-composer require xsavo/markdown-blog:*@dev
-```
-
-The package service provider is auto-registered through Laravel package discovery.
+The service provider and the `MarkdownBlog` facade alias are registered
+automatically through Laravel package discovery.
 
 ## Configuration
 
-Publish the config file if you want to customize the article location or formatting:
+Publish the config file to change where articles live or how they are formatted:
 
 ```bash
 php artisan vendor:publish --tag=markdown-blog-config
 ```
 
-Default configuration:
-
 ```php
+// config/markdown-blog.php
 return [
     'articles_path' => resource_path('markdown/articles'),
     'article_filename' => 'page.md',
@@ -52,11 +50,17 @@ return [
 ];
 ```
 
+| Key | Purpose |
+| --- | --- |
+| `articles_path` | Directory scanned for articles. A missing directory yields an empty collection rather than an error. |
+| `article_filename` | Only files with this exact name are treated as articles. |
+| `excerpt_length` | Truncation length for the excerpt generated when `description` is absent. An ellipsis is appended, so the result runs a few characters longer. |
+| `date_format` | PHP date format applied to `formatted_date`. |
+
 ## Article structure
 
-By default, the package looks for files named `page.md` inside the configured articles directory.
-
-Example:
+Each article is a directory containing one `page.md`. The directory is scanned
+recursively, so you are free to group articles into subdirectories.
 
 ```text
 resources/
@@ -64,42 +68,84 @@ resources/
     └── articles/
         ├── first-post/
         │   └── page.md
-        └── another-post/
-            └── page.md
+        └── 2024/
+            └── another-post/
+                └── page.md
 ```
-
-Example article:
 
 ```md
 ---
-title: Infinite Scroll with Laravel and Livewire
-description: Infinite scrolling is a popular feature for content-heavy pages.
-author: Rick Mwamodo
-date: 2024-01-17
-slug: infinite-scroll-with-laravel-and-livewire
+title: "Infinite Scroll with Laravel and Livewire"
+description: "Infinite scrolling is a popular feature for content-heavy pages."
+author: "Rick Mwamodo"
+date: "2024-01-17"
+slug: "infinite-scroll-with-laravel-and-livewire"
 ---
-
-# Infinite Scroll with Laravel and Livewire
 
 Article body goes here.
 ```
 
-Supported frontmatter fields:
+### Frontmatter fields
 
-- `title`
-- `description`
-- `author`
-- `date`
-- `slug`
+Every field is optional. When one is **absent**, the package falls back as
+follows. Note that a key which is present but blank (`title:`) counts as a
+value — you get an empty string, not the fallback.
 
-If some fields are omitted, the package falls back to sensible defaults where possible.
+| Field | Fallback |
+| --- | --- |
+| `slug` | The article's parent directory name. Either way the value is passed through `Str::slug()`. An article that resolves to an empty slug is skipped. |
+| `title` | `Str::headline()` of the slug, so `first-post` becomes `First Post`. |
+| `description` | An excerpt built from the body: markdown rendered, tags stripped, whitespace collapsed, truncated to `excerpt_length`. |
+| `author` | An empty string. |
+| `date` | An empty string, and `formatted_date` is then `null`. |
+
+### Frontmatter syntax
+
+This is **not** a YAML parser. It handles a small, deliberate subset: flat
+`key: value` pairs, one per line. Values may be unquoted, single-quoted, or
+double-quoted; surrounding quotes are stripped and every value is returned as a
+string, so `42` and `true` are not cast. Blank lines, `#` comments, and lines
+with no colon are skipped.
+
+Richer YAML is not rejected — it is quietly mis-read, so avoid it:
+
+| You write | You get |
+| --- | --- |
+| `author:` then an indented `name: Rick` | Indentation is ignored, so `name` is hoisted to a top-level key and `author` becomes `''`. |
+| `tags:` then `- php`, `- laravel` | The `- ` lines have no colon and are dropped; `tags` becomes `''`. |
+| `items:` then `- name: foo` | That line *does* contain a colon, so you get a literal key `- name`. |
+| `tags: [php, laravel]` | Kept verbatim as the string `'[php, laravel]'`. |
+
+Keep frontmatter flat and scalar, and parse richer values (a comma-separated
+list, for example) in your own code.
 
 ## Usage
 
-### Resolve the repository
+### Facade
 
 ```php
-use xsavo\MarkdownBlog\ArticleRepository;
+use apxcde\MarkdownBlog\Facades\MarkdownBlog;
+
+$articles = MarkdownBlog::all();
+$article = MarkdownBlog::findBySlug('infinite-scroll-with-laravel-and-livewire');
+```
+
+### Resolved service
+
+```php
+use apxcde\MarkdownBlog\MarkdownBlog;
+
+$blog = app(MarkdownBlog::class);
+
+$articles = $blog->all();
+$article = $blog->findBySlug('infinite-scroll-with-laravel-and-livewire');
+$repository = $blog->repository();
+```
+
+### Repository
+
+```php
+use apxcde\MarkdownBlog\ArticleRepository;
 
 $repository = app(ArticleRepository::class);
 
@@ -107,29 +153,36 @@ $articles = $repository->all();
 $article = $repository->findBySlug('infinite-scroll-with-laravel-and-livewire');
 ```
 
-### Resolve the package service
+### In a controller
 
 ```php
-use xsavo\MarkdownBlog\MarkdownBlog;
+use apxcde\MarkdownBlog\Facades\MarkdownBlog;
 
-$blog = app(MarkdownBlog::class);
+Route::get('/blog', fn () => view('blog.index', [
+    'articles' => MarkdownBlog::all(),
+]));
 
-$articles = $blog->all();
-$article = $blog->findBySlug('infinite-scroll-with-laravel-and-livewire');
+Route::get('/blog/{slug}', function (string $slug) {
+    abort_if(! $article = MarkdownBlog::findBySlug($slug), 404);
+
+    return view('blog.show', ['article' => $article]);
+});
 ```
 
-### Use the facade
+## API
 
-```php
-use xsavo\MarkdownBlog\Facades\MarkdownBlog;
+### `all(): Illuminate\Support\Collection`
 
-$articles = MarkdownBlog::all();
-$article = MarkdownBlog::findBySlug('infinite-scroll-with-laravel-and-livewire');
-```
+Returns every article as an array, sorted by `date` descending — newest first.
+Articles with no date, or with a date Carbon cannot parse, sort last. If
+`articles_path` does not exist, you get an empty collection.
+
+### `findBySlug(string $slug): ?array`
+
+Returns the matching article, or `null`. The argument is run through
+`Str::slug()` first, so `Infinite Scroll` and `infinite-scroll` both match.
 
 ## Returned article shape
-
-Each article is returned as an array like:
 
 ```php
 [
@@ -139,16 +192,32 @@ Each article is returned as an array like:
     'author' => 'Rick Mwamodo',
     'date' => '2024-01-17',
     'formatted_date' => 'Jan 17, 2024',
-    'content' => '# Infinite Scroll with Laravel and Livewire...',
+    'content' => 'Article body goes here.',
 ]
 ```
 
-## Notes
-
-This package handles article loading and normalization only. Rendering routes, controllers, Livewire components, and views remain the responsibility of the host application.
+`date` is returned exactly as written in the frontmatter. `formatted_date` is
+that date parsed by Carbon and rendered with `date_format`; it is `null` when no
+date is set, and falls back to the raw string when the date cannot be parsed.
+`content` is the markdown body with the frontmatter block removed, trimmed, and
+left unrendered — render it in your view.
 
 ## Testing
 
 ```bash
 composer test
 ```
+
+## Contributing
+
+This package is developed inside ApexCode's Turbine platform monorepo and
+published here as a one-way mirror. Please open **issues** on this repository.
+
+Pull requests are welcome, but note that this repository is machine-managed:
+its branches are overwritten by the next sync from the monorepo, so a PR cannot
+simply be merged here. Accepted changes are ported upstream and land back
+through a later sync, with credit preserved.
+
+## License
+
+The MIT License (MIT). See [LICENSE.md](LICENSE.md) for details.
