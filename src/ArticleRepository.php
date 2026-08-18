@@ -1,13 +1,13 @@
 <?php
 
-namespace xsavo\MarkdownBlog;
+namespace apxcde\MarkdownBlog;
 
 use Carbon\Carbon;
 use Illuminate\Contracts\Filesystem\FileNotFoundException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
-use xsavo\MarkdownBlog\Support\FrontmatterParser;
+use apxcde\MarkdownBlog\Support\FrontmatterParser;
 
 class ArticleRepository
 {

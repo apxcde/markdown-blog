@@ -1,10 +1,10 @@
 <?php
 
-namespace xsavo\MarkdownBlog;
+namespace apxcde\MarkdownBlog;
 
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
-use xsavo\MarkdownBlog\Support\FrontmatterParser;
+use apxcde\MarkdownBlog\Support\FrontmatterParser;
 
 class MarkdownBlogServiceProvider extends PackageServiceProvider
 {

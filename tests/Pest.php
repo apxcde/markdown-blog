@@ -1,5 +1,5 @@
 <?php
 
-use xsavo\MarkdownBlog\Tests\TestCase;
+use apxcde\MarkdownBlog\Tests\TestCase;
 
 uses(TestCase::class)->in(__DIR__);

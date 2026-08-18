@@ -1,9 +1,9 @@
 <?php
 
-namespace xsavo\MarkdownBlog\Tests;
+namespace apxcde\MarkdownBlog\Tests;
 
 use Orchestra\Testbench\TestCase as Orchestra;
-use xsavo\MarkdownBlog\MarkdownBlogServiceProvider;
+use apxcde\MarkdownBlog\MarkdownBlogServiceProvider;
 
 class TestCase extends Orchestra
 {
