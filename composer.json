@@ -1,8 +1,27 @@
 {
     "name": "apxcde/markdown-blog",
     "description": "Markdown-powered blog package for Laravel apps",
+    "keywords": [
+        "laravel",
+        "markdown",
+        "blog",
+        "articles",
+        "frontmatter",
+        "turbine"
+    ],
+    "homepage": "https://github.com/apxcde/markdown-blog",
     "type": "library",
     "license": "MIT",
+    "authors": [
+        {
+            "name": "ApexCode",
+            "homepage": "https://apexcode.dev"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/apxcde/markdown-blog/issues",
+        "source": "https://github.com/apxcde/markdown-blog"
+    },
     "require": {
         "php": "^8.3",
         "laravel/framework": "^13.0",
