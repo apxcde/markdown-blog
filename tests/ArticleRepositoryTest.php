@@ -11,18 +11,44 @@ it('lists markdown articles sorted by date descending', function () {
     $articles = app(ArticleRepository::class)->all();
 
     expect($articles->pluck('slug')->all())->toBe([
+        'archived-post',
         'custom-newest',
         'human-date',
         'no-description',
         'older-post',
+        'unknown-status',
     ])->and($articles->first())->toMatchArray([
-        'slug' => 'custom-newest',
-        'title' => 'Newest Article',
-        'description' => 'Newest description.',
+        'slug' => 'archived-post',
+        'title' => 'Archived Article',
+        'description' => 'Archived description.',
         'author' => 'Rick Mwamodo',
-        'date' => '2024-01-17',
-        'formatted_date' => 'Jan 17, 2024',
+        'date' => '2024-02-01',
+        'formatted_date' => 'Feb 1, 2024',
+        'status' => 'archive',
     ]);
+});
+
+it('defaults missing or unknown status to current and lists current before archive filters', function () {
+    $repository = app(ArticleRepository::class);
+
+    expect($repository->current()->pluck('slug')->all())->toBe([
+        'custom-newest',
+        'human-date',
+        'no-description',
+        'older-post',
+        'unknown-status',
+    ])->and($repository->archived()->pluck('slug')->all())->toBe([
+        'archived-post',
+    ])->and($repository->findBySlug('no-description')['status'])->toBe('current')
+        ->and($repository->findBySlug('unknown-status')['status'])->toBe('current')
+        ->and($repository->findBySlug('archived-post')['status'])->toBe('archive');
+});
+
+it('exposes current and archived collections through the package service', function () {
+    $blog = app(MarkdownBlog::class);
+
+    expect($blog->current()->pluck('status')->unique()->all())->toBe(['current'])
+        ->and($blog->archived()->pluck('status')->unique()->all())->toBe(['archive']);
 });
 
 it('sorts Carbon-parseable non-iso dates correctly', function () {

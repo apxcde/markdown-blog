@@ -14,6 +14,7 @@ It gives you:
 - a generated excerpt when an article declares no description
 - display-ready date formatting
 - slug-based article lookup, newest first
+- optional `status` frontmatter (`current` or `archive`; missing or unknown values default to `current`)
 
 It deliberately stops there: routes, controllers, Livewire components, and views
 stay in your application.
@@ -80,6 +81,7 @@ description: "Infinite scrolling is a popular feature for content-heavy pages."
 author: "Rick Mwamodo"
 date: "2024-01-17"
 slug: "infinite-scroll-with-laravel-and-livewire"
+status: archive
 ---
 
 Article body goes here.
@@ -98,6 +100,7 @@ value — you get an empty string, not the fallback.
 | `description` | An excerpt built from the body: markdown rendered, tags stripped, whitespace collapsed, truncated to `excerpt_length`. |
 | `author` | An empty string. |
 | `date` | An empty string, and `formatted_date` is then `null`. |
+| `status` | `current`. The only other recognized value is `archive` (case-insensitive). Anything else, including a blank `status:`, is treated as `current`. |
 
 ### Frontmatter syntax
 
@@ -127,6 +130,8 @@ list, for example) in your own code.
 use apxcde\MarkdownBlog\Facades\MarkdownBlog;
 
 $articles = MarkdownBlog::all();
+$current = MarkdownBlog::current();
+$archived = MarkdownBlog::archived();
 $article = MarkdownBlog::findBySlug('infinite-scroll-with-laravel-and-livewire');
 ```
 
@@ -138,6 +143,8 @@ use apxcde\MarkdownBlog\MarkdownBlog;
 $blog = app(MarkdownBlog::class);
 
 $articles = $blog->all();
+$current = $blog->current();
+$archived = $blog->archived();
 $article = $blog->findBySlug('infinite-scroll-with-laravel-and-livewire');
 $repository = $blog->repository();
 ```
@@ -175,7 +182,17 @@ Route::get('/blog/{slug}', function (string $slug) {
 
 Returns every article as an array, sorted by `date` descending — newest first.
 Articles with no date, or with a date Carbon cannot parse, sort last. If
-`articles_path` does not exist, you get an empty collection.
+`articles_path` does not exist, you get an empty collection. `all()` does not
+hide archived articles; use `current()` or `archived()` when a consumer wants
+only one status.
+
+### `current(): Illuminate\Support\Collection`
+
+Returns articles whose normalized `status` is `current`, still newest first.
+
+### `archived(): Illuminate\Support\Collection`
+
+Returns articles whose normalized `status` is `archive`, still newest first.
 
 ### `findBySlug(string $slug): ?array`
 
@@ -192,6 +209,7 @@ Returns the matching article, or `null`. The argument is run through
     'author' => 'Rick Mwamodo',
     'date' => '2024-01-17',
     'formatted_date' => 'Jan 17, 2024',
+    'status' => 'current',
     'content' => 'Article body goes here.',
 ]
 ```

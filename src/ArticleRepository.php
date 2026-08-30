@@ -33,6 +33,16 @@ class ArticleRepository
             ->values();
     }
 
+    public function current(): Collection
+    {
+        return $this->all()->where('status', 'current')->values();
+    }
+
+    public function archived(): Collection
+    {
+        return $this->all()->where('status', 'archive')->values();
+    }
+
     public function findBySlug(string $slug): ?array
     {
         return $this->all()->firstWhere('slug', Str::slug($slug));
@@ -60,6 +70,7 @@ class ArticleRepository
             'author' => $this->asString($frontmatter['author'] ?? ''),
             'date' => $date,
             'formatted_date' => $this->formatDate($date),
+            'status' => $this->normalizeStatus($this->asString($frontmatter['status'] ?? '')),
             'content' => $content,
         ];
     }
@@ -101,6 +112,11 @@ class ArticleRepository
         } catch (\Throwable) {
             return PHP_INT_MIN;
         }
+    }
+
+    private function normalizeStatus(string $status): string
+    {
+        return strtolower(trim($status)) === 'archive' ? 'archive' : 'current';
     }
 
     private function asString(mixed $value): string
