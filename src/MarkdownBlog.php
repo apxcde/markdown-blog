@@ -25,6 +25,16 @@ class MarkdownBlog
         return $this->articleRepository->archived();
     }
 
+    public function drafts(): Collection
+    {
+        return $this->articleRepository->drafts();
+    }
+
+    public function listed(): Collection
+    {
+        return $this->articleRepository->listed();
+    }
+
     public function findBySlug(string $slug): ?array
     {
         return $this->articleRepository->findBySlug($slug);

@@ -39,16 +39,56 @@ it('defaults missing or unknown status to current and lists current before archi
         'unknown-status',
     ])->and($repository->archived()->pluck('slug')->all())->toBe([
         'archived-post',
+    ])->and($repository->listed()->pluck('slug')->all())->toBe([
+        'custom-newest',
+        'human-date',
+        'no-description',
+        'older-post',
+        'unknown-status',
     ])->and($repository->findBySlug('no-description')['status'])->toBe('current')
         ->and($repository->findBySlug('unknown-status')['status'])->toBe('current')
-        ->and($repository->findBySlug('archived-post')['status'])->toBe('archive');
+        ->and($repository->findBySlug('archived-post')['status'])->toBe('archive')
+        ->and($repository->findBySlug('draft-post'))->toBeNull()
+        ->and($repository->drafts())->toHaveCount(0)
+        ->and($repository->all()->pluck('slug')->all())->not->toContain('draft-post');
 });
 
 it('exposes current and archived collections through the package service', function () {
     $blog = app(MarkdownBlog::class);
 
     expect($blog->current()->pluck('status')->unique()->all())->toBe(['current'])
-        ->and($blog->archived()->pluck('status')->unique()->all())->toBe(['archive']);
+        ->and($blog->archived()->pluck('status')->unique()->all())->toBe(['archive'])
+        ->and($blog->drafts())->toHaveCount(0);
+});
+
+it('exposes drafts only when the application environment is local', function () {
+    $this->app['env'] = 'local';
+
+    $blog = app(MarkdownBlog::class);
+
+    expect($blog->drafts()->pluck('slug')->all())->toBe(['draft-post'])
+        ->and($blog->all()->pluck('slug')->all())->toBe([
+            'draft-post',
+            'archived-post',
+            'custom-newest',
+            'human-date',
+            'no-description',
+            'older-post',
+            'unknown-status',
+        ])->and($blog->listed()->pluck('slug')->all())->toBe([
+            'draft-post',
+            'custom-newest',
+            'human-date',
+            'no-description',
+            'older-post',
+            'unknown-status',
+        ])->and($blog->current()->pluck('slug')->all())->not->toContain('draft-post')
+        ->and($blog->archived()->pluck('slug')->all())->toBe(['archived-post'])
+        ->and($blog->findBySlug('draft-post'))->toMatchArray([
+            'slug' => 'draft-post',
+            'status' => 'draft',
+            'title' => 'Draft Article',
+        ]);
 });
 
 it('sorts Carbon-parseable non-iso dates correctly', function () {

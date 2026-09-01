@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Facade;
  * @method static \Illuminate\Support\Collection all()
  * @method static \Illuminate\Support\Collection current()
  * @method static \Illuminate\Support\Collection archived()
+ * @method static \Illuminate\Support\Collection drafts()
+ * @method static \Illuminate\Support\Collection listed()
  * @method static array|null findBySlug(string $slug)
  * @method static \apxcde\MarkdownBlog\ArticleRepository repository()
  */

@@ -21,16 +21,13 @@ class ArticleRepository
 
     public function all(): Collection
     {
-        if (! File::isDirectory($this->articlesPath)) {
-            return collect();
+        $articles = $this->scan();
+
+        if ($this->draftsAreVisible()) {
+            return $articles;
         }
 
-        return collect(File::allFiles($this->articlesPath))
-            ->filter(fn ($file) => $file->getFilename() === $this->articleFilename)
-            ->map(fn ($file) => $this->hydrate($file->getPathname()))
-            ->filter()
-            ->sort(fn (array $left, array $right) => $this->compareArticleDates($left, $right))
-            ->values();
+        return $articles->where('status', '!=', 'draft')->values();
     }
 
     public function current(): Collection
@@ -41,6 +38,20 @@ class ArticleRepository
     public function archived(): Collection
     {
         return $this->all()->where('status', 'archive')->values();
+    }
+
+    public function drafts(): Collection
+    {
+        if (! $this->draftsAreVisible()) {
+            return collect();
+        }
+
+        return $this->scan()->where('status', 'draft')->values();
+    }
+
+    public function listed(): Collection
+    {
+        return $this->all()->where('status', '!=', 'archive')->values();
     }
 
     public function findBySlug(string $slug): ?array
@@ -114,9 +125,32 @@ class ArticleRepository
         }
     }
 
+    private function scan(): Collection
+    {
+        if (! File::isDirectory($this->articlesPath)) {
+            return collect();
+        }
+
+        return collect(File::allFiles($this->articlesPath))
+            ->filter(fn ($file) => $file->getFilename() === $this->articleFilename)
+            ->map(fn ($file) => $this->hydrate($file->getPathname()))
+            ->filter()
+            ->sort(fn (array $left, array $right) => $this->compareArticleDates($left, $right))
+            ->values();
+    }
+
+    private function draftsAreVisible(): bool
+    {
+        return app()->environment('local');
+    }
+
     private function normalizeStatus(string $status): string
     {
-        return strtolower(trim($status)) === 'archive' ? 'archive' : 'current';
+        return match (strtolower(trim($status))) {
+            'archive' => 'archive',
+            'draft' => 'draft',
+            default => 'current',
+        };
     }
 
     private function asString(mixed $value): string

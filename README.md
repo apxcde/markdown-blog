@@ -14,7 +14,7 @@ It gives you:
 - a generated excerpt when an article declares no description
 - display-ready date formatting
 - slug-based article lookup, newest first
-- optional `status` frontmatter (`current` or `archive`; missing or unknown values default to `current`)
+- optional `status` frontmatter (`current`, `archive`, or `draft`; missing or unknown values default to `current`)
 
 It deliberately stops there: routes, controllers, Livewire components, and views
 stay in your application.
@@ -100,7 +100,7 @@ value — you get an empty string, not the fallback.
 | `description` | An excerpt built from the body: markdown rendered, tags stripped, whitespace collapsed, truncated to `excerpt_length`. |
 | `author` | An empty string. |
 | `date` | An empty string, and `formatted_date` is then `null`. |
-| `status` | `current`. The only other recognized value is `archive` (case-insensitive). Anything else, including a blank `status:`, is treated as `current`. |
+| `status` | `current`. Recognized values are `current`, `archive`, and `draft` (case-insensitive). Anything else, including a blank `status:`, is treated as `current` for backward compatibility. **New posts must set `status: draft`.** Erick is the only publisher (`draft` → `current`). |
 
 ### Frontmatter syntax
 
@@ -132,6 +132,8 @@ use apxcde\MarkdownBlog\Facades\MarkdownBlog;
 $articles = MarkdownBlog::all();
 $current = MarkdownBlog::current();
 $archived = MarkdownBlog::archived();
+$drafts = MarkdownBlog::drafts();
+$listed = MarkdownBlog::listed();
 $article = MarkdownBlog::findBySlug('infinite-scroll-with-laravel-and-livewire');
 ```
 
@@ -145,6 +147,8 @@ $blog = app(MarkdownBlog::class);
 $articles = $blog->all();
 $current = $blog->current();
 $archived = $blog->archived();
+$drafts = $blog->drafts();
+$listed = $blog->listed();
 $article = $blog->findBySlug('infinite-scroll-with-laravel-and-livewire');
 $repository = $blog->repository();
 ```
@@ -180,24 +184,41 @@ Route::get('/blog/{slug}', function (string $slug) {
 
 ### `all(): Illuminate\Support\Collection`
 
-Returns every article as an array, sorted by `date` descending — newest first.
-Articles with no date, or with a date Carbon cannot parse, sort last. If
-`articles_path` does not exist, you get an empty collection. `all()` does not
-hide archived articles; use `current()` or `archived()` when a consumer wants
-only one status.
+Returns every **visible** article as an array, sorted by `date` descending —
+newest first. Articles with no date, or with a date Carbon cannot parse, sort
+last. If `articles_path` does not exist, you get an empty collection. `all()`
+does not hide archived articles; use `current()`, `archived()`, or `listed()`
+when a consumer wants a subset.
+
+Drafts (`status: draft`) are included **only** when the application environment
+is `local` (`APP_ENV=local`). They are omitted in `testing`, `staging`, and
+`production`. `findBySlug()` uses the same gate, so a draft slug is `null`
+outside local.
 
 ### `current(): Illuminate\Support\Collection`
 
 Returns articles whose normalized `status` is `current`, still newest first.
+Drafts are never included.
 
 ### `archived(): Illuminate\Support\Collection`
 
 Returns articles whose normalized `status` is `archive`, still newest first.
 
+### `drafts(): Illuminate\Support\Collection`
+
+Returns articles whose normalized `status` is `draft`, newest first, and only
+when `APP_ENV=local`. Otherwise an empty collection.
+
+### `listed(): Illuminate\Support\Collection`
+
+Returns the public listing: `current` posts, plus drafts when local, still
+newest first. Archived posts are omitted.
+
 ### `findBySlug(string $slug): ?array`
 
-Returns the matching article, or `null`. The argument is run through
+Returns the matching **visible** article, or `null`. The argument is run through
 `Str::slug()` first, so `Infinite Scroll` and `infinite-scroll` both match.
+Draft slugs resolve only when `APP_ENV=local`.
 
 ## Returned article shape
 
