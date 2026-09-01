@@ -11,26 +11,46 @@ use apxcde\MarkdownBlog\Support\FrontmatterParser;
 
 class ArticleRepository
 {
+    private ?Collection $scanned = null;
+
     public function __construct(
         private readonly FrontmatterParser $frontmatterParser,
         private readonly string $articlesPath,
         private readonly string $articleFilename = 'page.md',
         private readonly int $excerptLength = 220,
         private readonly string $dateFormat = 'M j, Y',
+        private readonly bool $showDrafts = false,
     ) {}
 
     public function all(): Collection
     {
-        if (! File::isDirectory($this->articlesPath)) {
-            return collect();
+        $articles = $this->scan();
+
+        if ($this->showDrafts) {
+            return $articles->values();
         }
 
-        return collect(File::allFiles($this->articlesPath))
-            ->filter(fn ($file) => $file->getFilename() === $this->articleFilename)
-            ->map(fn ($file) => $this->hydrate($file->getPathname()))
-            ->filter()
-            ->sort(fn (array $left, array $right) => $this->compareArticleDates($left, $right))
-            ->values();
+        return $articles->where('status', '!=', 'draft')->values();
+    }
+
+    public function current(): Collection
+    {
+        return $this->all()->where('status', 'current')->values();
+    }
+
+    public function archived(): Collection
+    {
+        return $this->all()->where('status', 'archive')->values();
+    }
+
+    public function drafts(): Collection
+    {
+        return $this->all()->where('status', 'draft')->values();
+    }
+
+    public function listed(): Collection
+    {
+        return $this->all()->where('status', '!=', 'archive')->values();
     }
 
     public function findBySlug(string $slug): ?array
@@ -60,6 +80,7 @@ class ArticleRepository
             'author' => $this->asString($frontmatter['author'] ?? ''),
             'date' => $date,
             'formatted_date' => $this->formatDate($date),
+            'status' => $this->normalizeStatus($this->asString($frontmatter['status'] ?? '')),
             'content' => $content,
         ];
     }
@@ -101,6 +122,36 @@ class ArticleRepository
         } catch (\Throwable) {
             return PHP_INT_MIN;
         }
+    }
+
+    /**
+     * Walk the articles directory once per repository instance.
+     */
+    private function scan(): Collection
+    {
+        if ($this->scanned !== null) {
+            return $this->scanned;
+        }
+
+        if (! File::isDirectory($this->articlesPath)) {
+            return $this->scanned = collect();
+        }
+
+        return $this->scanned = collect(File::allFiles($this->articlesPath))
+            ->filter(fn ($file) => $file->getFilename() === $this->articleFilename)
+            ->map(fn ($file) => $this->hydrate($file->getPathname()))
+            ->filter()
+            ->sort(fn (array $left, array $right) => $this->compareArticleDates($left, $right))
+            ->values();
+    }
+
+    private function normalizeStatus(string $status): string
+    {
+        return match (strtolower(trim($status))) {
+            'archive' => 'archive',
+            'draft' => 'draft',
+            default => 'current',
+        };
     }
 
     private function asString(mixed $value): string

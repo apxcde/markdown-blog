@@ -20,12 +20,17 @@ class MarkdownBlogServiceProvider extends PackageServiceProvider
         $this->app->singleton(FrontmatterParser::class);
 
         $this->app->bind(ArticleRepository::class, function ($app): ArticleRepository {
+            $showDrafts = $app['config']->get('markdown-blog.show_drafts');
+
             return new ArticleRepository(
                 frontmatterParser: $app->make(FrontmatterParser::class),
                 articlesPath: (string) $app['config']->get('markdown-blog.articles_path', resource_path('markdown/articles')),
                 articleFilename: (string) $app['config']->get('markdown-blog.article_filename', 'page.md'),
                 excerptLength: (int) $app['config']->get('markdown-blog.excerpt_length', 220),
                 dateFormat: (string) $app['config']->get('markdown-blog.date_format', 'M j, Y'),
+                showDrafts: $showDrafts === null
+                    ? $app->environment('local')
+                    : filter_var($showDrafts, FILTER_VALIDATE_BOOLEAN),
             );
         });
 
