@@ -11,20 +11,23 @@ use apxcde\MarkdownBlog\Support\FrontmatterParser;
 
 class ArticleRepository
 {
+    private ?Collection $scanned = null;
+
     public function __construct(
         private readonly FrontmatterParser $frontmatterParser,
         private readonly string $articlesPath,
         private readonly string $articleFilename = 'page.md',
         private readonly int $excerptLength = 220,
         private readonly string $dateFormat = 'M j, Y',
+        private readonly bool $showDrafts = false,
     ) {}
 
     public function all(): Collection
     {
         $articles = $this->scan();
 
-        if ($this->draftsAreVisible()) {
-            return $articles;
+        if ($this->showDrafts) {
+            return $articles->values();
         }
 
         return $articles->where('status', '!=', 'draft')->values();
@@ -42,11 +45,7 @@ class ArticleRepository
 
     public function drafts(): Collection
     {
-        if (! $this->draftsAreVisible()) {
-            return collect();
-        }
-
-        return $this->scan()->where('status', 'draft')->values();
+        return $this->all()->where('status', 'draft')->values();
     }
 
     public function listed(): Collection
@@ -125,23 +124,25 @@ class ArticleRepository
         }
     }
 
+    /**
+     * Walk the articles directory once per repository instance.
+     */
     private function scan(): Collection
     {
-        if (! File::isDirectory($this->articlesPath)) {
-            return collect();
+        if ($this->scanned !== null) {
+            return $this->scanned;
         }
 
-        return collect(File::allFiles($this->articlesPath))
+        if (! File::isDirectory($this->articlesPath)) {
+            return $this->scanned = collect();
+        }
+
+        return $this->scanned = collect(File::allFiles($this->articlesPath))
             ->filter(fn ($file) => $file->getFilename() === $this->articleFilename)
             ->map(fn ($file) => $this->hydrate($file->getPathname()))
             ->filter()
             ->sort(fn (array $left, array $right) => $this->compareArticleDates($left, $right))
             ->values();
-    }
-
-    private function draftsAreVisible(): bool
-    {
-        return app()->environment('local');
     }
 
     private function normalizeStatus(string $status): string

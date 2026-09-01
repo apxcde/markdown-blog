@@ -1,5 +1,7 @@
 <?php
 
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 use apxcde\MarkdownBlog\ArticleRepository;
 use apxcde\MarkdownBlog\MarkdownBlog;
 
@@ -89,6 +91,49 @@ it('exposes drafts only when the application environment is local', function () 
             'status' => 'draft',
             'title' => 'Draft Article',
         ]);
+});
+
+it('shows drafts in any environment when show_drafts is true', function () {
+    config()->set('markdown-blog.show_drafts', true);
+
+    $repository = app(ArticleRepository::class);
+
+    expect(app()->environment())->not->toBe('local')
+        ->and($repository->drafts()->pluck('slug')->all())->toBe(['draft-post'])
+        ->and($repository->listed()->first()['slug'])->toBe('draft-post')
+        ->and($repository->current()->pluck('slug')->all())->not->toContain('draft-post')
+        ->and($repository->findBySlug('draft-post'))->not->toBeNull();
+});
+
+it('hides drafts in the local environment when show_drafts is false', function () {
+    $this->app['env'] = 'local';
+    config()->set('markdown-blog.show_drafts', false);
+
+    $repository = app(ArticleRepository::class);
+
+    expect($repository->drafts())->toHaveCount(0)
+        ->and($repository->all()->pluck('slug')->all())->not->toContain('draft-post')
+        ->and($repository->findBySlug('draft-post'))->toBeNull();
+});
+
+it('scans the articles directory once per repository instance', function () {
+    $path = sys_get_temp_dir().'/markdown-blog-'.Str::random(8);
+    File::copyDirectory(__DIR__.'/Fixtures/articles', $path);
+    config()->set('markdown-blog.articles_path', $path);
+
+    try {
+        $repository = app(ArticleRepository::class);
+        $before = $repository->all()->count();
+
+        File::ensureDirectoryExists($path.'/late-post');
+        File::put($path.'/late-post/page.md', "---\ntitle: Late Post\ndate: 2024-05-01\n---\n\nLate body.");
+
+        expect($repository->all())->toHaveCount($before)
+            ->and($repository->findBySlug('late-post'))->toBeNull()
+            ->and(app(ArticleRepository::class)->all())->toHaveCount($before + 1);
+    } finally {
+        File::deleteDirectory($path);
+    }
 });
 
 it('sorts Carbon-parseable non-iso dates correctly', function () {

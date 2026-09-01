@@ -15,6 +15,7 @@ It gives you:
 - display-ready date formatting
 - slug-based article lookup, newest first
 - optional `status` frontmatter (`current`, `archive`, or `draft`; missing or unknown values default to `current`)
+- drafts hidden outside the `local` environment unless you say otherwise
 
 It deliberately stops there: routes, controllers, Livewire components, and views
 stay in your application.
@@ -48,6 +49,7 @@ return [
     'article_filename' => 'page.md',
     'excerpt_length' => 220,
     'date_format' => 'M j, Y',
+    'show_drafts' => env('MARKDOWN_BLOG_SHOW_DRAFTS'),
 ];
 ```
 
@@ -57,6 +59,7 @@ return [
 | `article_filename` | Only files with this exact name are treated as articles. |
 | `excerpt_length` | Truncation length for the excerpt generated when `description` is absent. An ellipsis is appended, so the result runs a few characters longer. |
 | `date_format` | PHP date format applied to `formatted_date`. |
+| `show_drafts` | Visibility of `status: draft` articles. `null` (default) shows them only when the application environment is `local`; `true` or `false` forces them on or off in every environment. |
 
 ## Article structure
 
@@ -100,7 +103,7 @@ value — you get an empty string, not the fallback.
 | `description` | An excerpt built from the body: markdown rendered, tags stripped, whitespace collapsed, truncated to `excerpt_length`. |
 | `author` | An empty string. |
 | `date` | An empty string, and `formatted_date` is then `null`. |
-| `status` | `current`. Recognized values are `current`, `archive`, and `draft` (case-insensitive). Anything else, including a blank `status:`, is treated as `current` for backward compatibility. **New posts must set `status: draft`.** Erick is the only publisher (`draft` → `current`). |
+| `status` | `current`. Recognized values are `current`, `archive`, and `draft` (case-insensitive). Anything else, including a blank `status:`, is treated as `current` for backward compatibility. Start new posts as `status: draft` so they stay hidden until you publish them. |
 
 ### Frontmatter syntax
 
@@ -170,7 +173,8 @@ $article = $repository->findBySlug('infinite-scroll-with-laravel-and-livewire');
 use apxcde\MarkdownBlog\Facades\MarkdownBlog;
 
 Route::get('/blog', fn () => view('blog.index', [
-    'articles' => MarkdownBlog::all(),
+    'articles' => MarkdownBlog::listed(),
+    'archived' => MarkdownBlog::archived(),
 ]));
 
 Route::get('/blog/{slug}', function (string $slug) {
@@ -190,10 +194,14 @@ last. If `articles_path` does not exist, you get an empty collection. `all()`
 does not hide archived articles; use `current()`, `archived()`, or `listed()`
 when a consumer wants a subset.
 
-Drafts (`status: draft`) are included **only** when the application environment
-is `local` (`APP_ENV=local`). They are omitted in `testing`, `staging`, and
-`production`. `findBySlug()` uses the same gate, so a draft slug is `null`
-outside local.
+Drafts (`status: draft`) are included only while drafts are visible. By default
+that means the application environment is `local`; set the `show_drafts` config
+key to `true` or `false` to override that in any environment. `findBySlug()`
+uses the same gate, so a hidden draft's slug resolves to `null`.
+
+Each repository instance walks `articles_path` once and reuses the result for
+every call, so `listed()` followed by `archived()` costs a single directory
+scan. Resolve a fresh instance to pick up files added since.
 
 ### `current(): Illuminate\Support\Collection`
 
@@ -206,19 +214,19 @@ Returns articles whose normalized `status` is `archive`, still newest first.
 
 ### `drafts(): Illuminate\Support\Collection`
 
-Returns articles whose normalized `status` is `draft`, newest first, and only
-when `APP_ENV=local`. Otherwise an empty collection.
+Returns articles whose normalized `status` is `draft`, newest first, while
+drafts are visible. Otherwise an empty collection.
 
 ### `listed(): Illuminate\Support\Collection`
 
-Returns the public listing: `current` posts, plus drafts when local, still
-newest first. Archived posts are omitted.
+Returns the public listing: `current` posts, plus drafts while they are
+visible, still newest first. Archived posts are omitted.
 
 ### `findBySlug(string $slug): ?array`
 
 Returns the matching **visible** article, or `null`. The argument is run through
 `Str::slug()` first, so `Infinite Scroll` and `infinite-scroll` both match.
-Draft slugs resolve only when `APP_ENV=local`.
+Draft slugs resolve only while drafts are visible.
 
 ## Returned article shape
 
@@ -230,7 +238,7 @@ Draft slugs resolve only when `APP_ENV=local`.
     'author' => 'Rick Mwamodo',
     'date' => '2024-01-17',
     'formatted_date' => 'Jan 17, 2024',
-    'status' => 'current',
+    'status' => 'archive',
     'content' => 'Article body goes here.',
 ]
 ```
